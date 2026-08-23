@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Forge — Demo Reel</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root{
+    --ink:#0B1220; --ink2:#0E1830; --panel:#121B2E;
+    --amber:#F5A623; --cyan:#5FE3C9; --text:#E9EEF7; --muted:#8FA0BC;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:linear-gradient(180deg, var(--ink) 0%, var(--ink2) 100%);
+    color:var(--text); font-family:'Inter', sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .display{font-family:'Space Grotesk', sans-serif;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+
+  /* phone frame for a clean recordable crop */
+  .frame{
+    width:390px; height:780px; background:var(--ink);
+    border-radius:36px; border:8px solid #050810;
+    box-shadow:0 40px 100px rgba(0,0,0,0.6);
+    position:relative; overflow:hidden;
+  }
+  .screen{
+    position:absolute; inset:0; padding:28px 22px;
+    opacity:0; transform:translateY(14px);
+    transition:opacity 0.5s ease, transform 0.5s ease;
+    pointer-events:none;
+  }
+  .screen.active{opacity:1; transform:translateY(0); pointer-events:auto;}
+
+  .brand{display:flex; align-items:center; gap:8px; margin-bottom:26px;}
+  .brand .dot{width:8px; height:8px; border-radius:50%; background:var(--amber);}
+  .brand span{font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:15px; letter-spacing:0.4px;}
+
+  h1{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:24px; line-height:1.25; margin-bottom:10px;}
+  .muted{color:var(--muted); font-size:13.5px; line-height:1.5;}
+
+  .field{
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);
+    border-radius:12px; padding:14px; font-size:14px; margin-top:18px; min-height:56px;
+    color:var(--text);
+  }
+  .cursor{display:inline-block; width:2px; height:14px; background:var(--cyan); margin-left:2px; animation:blink 0.9s infinite; vertical-align:middle;}
+  @keyframes blink{50%{opacity:0;}}
+
+  .chip-row{display:flex; gap:8px; margin-top:16px;}
+  .chip{
+    padding:9px 13px; border-radius:9px; font-size:12.5px; font-weight:600;
+    border:1px solid rgba(255,255,255,0.15); color:var(--muted);
+  }
+  .chip.picked{border-color:var(--cyan); color:var(--cyan); background:rgba(95,227,201,0.1);}
+
+  .btn{
+    margin-top:22px; background:var(--amber); color:#1A1200; font-weight:800; font-size:14px;
+    padding:13px 18px; border-radius:11px; text-align:center; width:100%;
+  }
+
+  .spinner{
+    width:34px; height:34px; border-radius:50%;
+    border:3px solid rgba(255,255,255,0.12); border-top-color:var(--amber);
+    animation:spin 0.9s linear infinite; margin:0 auto 16px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .center{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;}
+
+  .node-row{display:flex; gap:12px; margin-top:16px;}
+  .node{
+    width:26px; height:26px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;
+    border:2px solid rgba(255,255,255,0.15); color:var(--muted);
+  }
+  .node.done{background:var(--cyan); border-color:var(--cyan); color:#06251F;}
+  .node.now{border-color:var(--amber); color:var(--amber); background:rgba(245,166,35,0.15);}
+  .level-card{
+    background:var(--panel); border:1px solid rgba(255,255,255,0.08); border-radius:14px;
+    padding:14px; margin-top:10px; flex:1;
+  }
+  .level-card b{font-size:13.5px; display:block; margin-bottom:2px;}
+  .level-card span{font-size:11.5px; color:var(--muted);}
+
+  .code-box{
+    background:#080D18; border-radius:12px; padding:14px; margin-top:14px;
+    font-size:12px; color:var(--cyan); min-height:120px; white-space:pre-wrap;
+  }
+  .badge{
+    display:inline-block; font-size:11px; font-weight:700; color:var(--cyan);
+    background:rgba(95,227,201,0.1); border:1px solid rgba(95,227,201,0.3);
+    padding:4px 9px; border-radius:100px; margin-top:12px;
+  }
+
+  .final-card{
+    background:linear-gradient(160deg, rgba(245,166,35,0.12), rgba(95,227,201,0.06));
+    border:1px solid rgba(245,166,35,0.35); border-radius:16px; padding:20px; margin-top:20px;
+  }
+  .final-card h2{font-family:'Space Grotesk',sans-serif; font-size:19px; margin-bottom:8px;}
+
+  .progress-dots{
+    position:absolute; bottom:22px; left:0; right:0; display:flex; justify-content:center; gap:6px;
+  }
+  .progress-dots i{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,0.15);}
+  .progress-dots i.on{background:var(--amber);}
+</style>
+</head>
+<body>
+
+<div class="frame" id="frame">
+
+  <!-- SCREEN 1: onboarding, typing -->
+  <div class="screen active" data-s="0">
+    <div class="brand"><div class="dot"></div><span>FORGE</span></div>
+    <h1>What do you want your AI-powered tool to do?</h1>
+    <div class="field" id="typeTarget"><span class="cursor"></span></div>
+    <div class="chip-row">
+      <div class="chip">Never, zero</div>
+      <div class="chip picked" id="chipA">A little</div>
+      <div class="chip">Some experience</div>
+    </div>
+    <div class="btn">Build my path →</div>
+  </div>
+
+  <!-- SCREEN 2: generating -->
+  <div class="screen" data-s="1">
+    <div class="center">
+      <div class="spinner"></div>
+      <div class="display" style="font-size:17px; font-weight:700;">Designing your path...</div>
+      <div class="muted" style="margin-top:6px;">Building the exact steps for a game NPC AI.</div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: roadmap -->
+  <div class="screen" data-s="2">
+    <div class="brand"><div class="dot"></div><span>FORGE</span></div>
+    <div class="badge">YOUR TOOL</div>
+    <h1 style="margin-top:8px;">Enemy AI Behavior Engine</h1>
+    <div class="muted">An NPC that reacts to the player in real time.</div>
+    <div style="margin-top:18px;">
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <div class="node done">✓</div>
+        <div class="level-card"><b>Reading the player's position</b><span>Variables & values</span></div>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start; margin-top:6px;">
+        <div class="node done">✓</div>
+        <div class="level-card"><b>Deciding: chase or wander</b><span>Conditionals</span></div>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start; margin-top:6px;">
+        <div class="node now">3</div>
+        <div class="level-card"><b>Calling the AI for a next move</b><span>fetch() & async</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: lesson, code typing -->
+  <div class="screen" data-s="3">
+    <div class="brand"><div class="dot"></div><span>FORGE</span></div>
+    <div class="muted" style="font-size:11.5px; letter-spacing:0.5px; color:var(--cyan); font-weight:700;">STEP 3 · FETCH & ASYNC</div>
+    <h1 style="font-size:19px; margin-top:6px;">Calling the AI for a next move</h1>
+    <div class="muted">Your task: send the enemy's state and get back its next action.</div>
+    <div class="code-box mono" id="codeTarget"></div>
+  </div>
+
+  <!-- SCREEN 5: check passed -->
+  <div class="screen" data-s="4">
+    <div class="center">
+      <div style="width:56px; height:56px; border-radius:50%; background:rgba(95,227,201,0.15); border:2px solid var(--cyan); display:flex; align-items:center; justify-content:center; font-size:26px; color:var(--cyan); margin-bottom:16px;">✓</div>
+      <div class="display" style="font-size:18px; font-weight:700;">Nice work.</div>
+      <div class="muted" style="margin-top:6px; max-width:260px;">Your explanation showed you actually understand how the AI call works — not just that it runs.</div>
+    </div>
+  </div>
+
+  <!-- SCREEN 6: capstone -->
+  <div class="screen" data-s="5">
+    <div class="brand"><div class="dot"></div><span>FORGE</span></div>
+    <div style="text-align:center; margin-top:6px;">
+      <div style="font-size:34px;">🏁</div>
+      <h1 style="font-size:20px;">You built Enemy AI Behavior Engine</h1>
+      <div class="muted">Every piece was code you wrote and explained yourself.</div>
+    </div>
+    <div class="final-card">
+      <h2>⬇ Your finished tool</h2>
+      <div class="muted" style="font-size:12.5px;">enemy-ai-behavior-engine.js — ready to drop into your game.</div>
+      <div class="btn">Download your tool</div>
+    </div>
+  </div>
+
+  <div class="progress-dots">
+    <i class="on" data-d="0"></i><i data-d="1"></i><i data-d="2"></i><i data-d="3"></i><i data-d="4"></i><i data-d="5"></i>
+  </div>
+</div>
+
+<script>
+  const goal = "An enemy AI that chases the player when close, wanders when far, and dodges attacks";
+  const typeTarget = document.getElementById('typeTarget');
+  const codeTarget = document.getElementById('codeTarget');
+  const codeSnippet =
+`async function nextMove(enemy, player) {
+  const res = await fetch(AI_ENDPOINT, {
+    method: "POST",
+    body: JSON.stringify({ enemy, player })
+  });
+  const move = await res.json();
+  return move.action; // "chase" | "dodge" | "wander"
+}`;
+
+  function typeInto(el, text, speed, cb) {
+    let i = 0;
+    el.innerHTML = '';
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    function step() {
+      if (i <= text.length) {
+        el.textContent = text.slice(0, i);
+        el.appendChild(cursor);
+        i++;
+        setTimeout(step, speed);
+      } else if (cb) { cb(); }
+    }
+    step();
+  }
+
+  const screens = document.querySelectorAll('.screen');
+  const dots = document.querySelectorAll('.progress-dots i');
+  function showScreen(n) {
+    screens.forEach(s => s.classList.toggle('active', s.dataset.s == n));
+    dots.forEach(d => d.classList.toggle('on', d.dataset.d == n));
+  }
+
+  function sequence() {
+    showScreen(0);
+    typeInto(typeTarget, goal, 28);
+
+    setTimeout(() => showScreen(1), 3600);
+    setTimeout(() => showScreen(2), 5600);
+    setTimeout(() => {
+      showScreen(3);
+      typeInto(codeTarget, codeSnippet, 20);
+    }, 8600);
+    setTimeout(() => showScreen(4), 14500);
+    setTimeout(() => showScreen(5), 17000);
+    setTimeout(sequence, 22000); // loop
+  }
+
+  sequence();
+</script>
+
+</body>
+</html>
