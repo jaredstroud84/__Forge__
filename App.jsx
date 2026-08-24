@@ -454,7 +454,7 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
             </div>
           </div>
           <a
-            href="https://buy.stripe.com/test_4gMbJ3e8845LdgO190bsc00"
+            href="https://buy.stripe.com/4gMbJ3e8845LdgO190bsc00"
             style={{
               display: "block",
               textAlign: "center",
