@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Analytics } from "@vercel/analytics/react";
 
 const INK = "#0B1220";
 const PANEL = "#121B2E";
@@ -47,6 +48,7 @@ function Shell({ children }) {
         textarea { font-family: 'JetBrains Mono', monospace; }
       `}</style>
       <div style={{ maxWidth: 640, margin: "0 auto" }}>{children}</div>
+      <Analytics />
     </div>
   );
 }
