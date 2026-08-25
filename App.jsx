@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const INK = "#0B1220";
 const PANEL = "#121B2E";
@@ -8,8 +8,6 @@ const TEXT = "#E9EEF7";
 const MUTED = "#8FA0BC";
 
 async function askClaude(prompt, system) {
-  // Calls our own backend (/api/claude) instead of Anthropic directly —
-  // the real API key stays server-side and is never visible to the browser.
   const res = await fetch("/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -92,14 +90,9 @@ function Btn({ onClick, children, disabled, variant = "primary" }) {
   );
 }
 
-const FREE_LEVELS = 2; // first 2 steps are free for everyone, no payment needed
+const FREE_LEVELS = 2;
 const BUILD_PRICE = "$4.99";
-
-function getUnlockedFromURL() {
-  if (typeof window === "undefined") return false;
-  const params = new URLSearchParams(window.location.search);
-  return params.get("unlocked") === "true";
-}
+const SAVE_KEY = "forge_progress_v1";
 
 export default function BuildWithCode() {
   const [phase, setPhase] = useState("onboarding");
@@ -121,9 +114,61 @@ export default function BuildWithCode() {
   const [capstoneCode, setCapstoneCode] = useState("");
   const [capstoneWalkthrough, setCapstoneWalkthrough] = useState("");
   const [buildingCapstone, setBuildingCapstone] = useState(false);
-  const [unlocked, setUnlocked] = useState(getUnlockedFromURL);
+  const [unlocked, setUnlocked] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [shareText, setShareText] = useState("");
   const consoleBuffer = useRef([]);
+
+  // On load: restore any saved progress, and verify payment via session_id if present
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SAVE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.roadmap) setRoadmap(parsed.roadmap);
+        if (parsed.completed) setCompleted(parsed.completed);
+        if (parsed.levelCode) setLevelCode(parsed.levelCode);
+        if (parsed.unlocked) setUnlocked(true);
+        if (parsed.goal) setGoal(parsed.goal);
+        if (parsed.experience) setExperience(parsed.experience);
+        if (parsed.roadmap) setPhase("roadmap");
+      }
+    } catch (e) {
+      // ignore corrupted local storage
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    if (sessionId) {
+      setVerifyingPayment(true);
+      fetch(`/api/verify-payment?session_id=${encodeURIComponent(sessionId)}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.paid) {
+            setUnlocked(true);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          setVerifyingPayment(false);
+          // clean the session_id off the URL so refreshes don't re-verify
+          window.history.replaceState({}, "", window.location.pathname);
+        });
+    }
+  }, []);
+
+  // Persist progress any time the important bits change
+  useEffect(() => {
+    if (!roadmap) return;
+    try {
+      localStorage.setItem(
+        SAVE_KEY,
+        JSON.stringify({ roadmap, completed, levelCode, unlocked, goal, experience })
+      );
+    } catch (e) {
+      // ignore storage errors (e.g. private browsing)
+    }
+  }, [roadmap, completed, levelCode, unlocked, goal, experience]);
 
   async function generateRoadmap() {
     setError("");
@@ -266,6 +311,16 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
     }
   }
 
+  // Save progress right before leaving for Stripe, so the redirect back can restore it
+  function goToCheckout() {
+    try {
+      localStorage.setItem(
+        SAVE_KEY,
+        JSON.stringify({ roadmap, completed, levelCode, unlocked, goal, experience })
+      );
+    } catch (e) {}
+  }
+
   // ---- ONBOARDING ----
   if (phase === "onboarding") {
     return (
@@ -351,6 +406,11 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
     const doneCount = Object.keys(completed).length;
     return (
       <Shell>
+        {verifyingPayment && (
+          <Panel>
+            <div style={{ textAlign: "center", fontSize: 13.5, color: MUTED }}>Confirming your payment...</div>
+          </Panel>
+        )}
         <Panel>
           <div style={{ fontSize: 12, color: CYAN, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>
             YOUR TOOL
@@ -426,7 +486,6 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
 
   // ---- PAYWALL ----
   if (phase === "paywall" && roadmap) {
-    // paywall — fixed price for every build
     return (
       <Shell>
         <Panel>
@@ -455,6 +514,7 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
           </div>
           <a
             href="https://buy.stripe.com/4gMbJ3e8845LdgO190bsc00"
+            onClick={goToCheckout}
             style={{
               display: "block",
               textAlign: "center",
@@ -756,12 +816,14 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
         <Btn
           variant="ghost"
           onClick={() => {
+            localStorage.removeItem(SAVE_KEY);
             setPhase("onboarding");
             setGoal("");
             setExperience(null);
             setRoadmap(null);
             setCompleted({});
             setLevelCode({});
+            setUnlocked(false);
             setCapstoneCode("");
             setCapstoneWalkthrough("");
           }}
