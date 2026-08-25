@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const INK = "#0B1220";
 const PANEL = "#121B2E";
@@ -45,6 +46,7 @@ function Shell({ children }) {
         textarea { font-family: 'JetBrains Mono', monospace; }
       `}</style>
       <div style={{ maxWidth: 640, margin: "0 auto" }}>{children}</div>
+      <SpeedInsights />
     </div>
   );
 }
