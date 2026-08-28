@@ -7,7 +7,7 @@
 <meta name="description" content="Tell Forge the AI tool you want. It builds a custom coding path. You write real code, understand every piece, and walk away with the finished tool plus the skill to build more. $4.99 one time. First 2 steps free." />
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
-  :root{--ink:#0B1220;--ink2:#0E1830;--panel:#121B2E;--amber:#F5A623;--cyan:#5FE3C9;--text:#E9EEF7;--muted:#8FA0BC;}
+  :root{--ink:#0B1220;--ink2:#0E1830;--panel:#121B2E;--amber:#CB5903;--cyan:#5FE3C9;--text:#E9EEF7;--muted:#8FA0BC;}
   *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
   body{background:linear-gradient(180deg,var(--ink) 0%,var(--ink2) 100%);color:var(--text);font-family:'Inter',sans-serif;line-height:1.5;}
   .display{font-family:'Space Grotesk',sans-serif;} .mono{font-family:'JetBrains Mono',monospace;} a{color:inherit;}
@@ -25,7 +25,7 @@
   .against{margin-top:70px;border-top:1px solid rgba(255,255,255,0.08);padding-top:36px;}
   .against-label{font-size:12.5px;color:var(--muted);letter-spacing:1px;font-weight:700;margin-bottom:18px;}
   .against-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;}
-  .against-col{padding:22px 24px;} .against-col.them{background:rgba(255,255,255,0.02);color:var(--muted);} .against-col.us{background:rgba(245,166,35,0.06);}
+  .against-col{padding:22px 24px;} .against-col.them{background:rgba(255,255,255,0.02);color:var(--muted);} .against-col.us{background:rgba(203,89,3,0.06);}
   .against-col h4{font-family:'Space Grotesk',sans-serif;font-size:14px;margin-bottom:14px;} .against-col.them h4{color:var(--muted);} .against-col.us h4{color:var(--amber);}
   .against-col ul{list-style:none;} .against-col li{font-size:14px;padding:7px 0;display:flex;gap:8px;}
   .against-col.them li:before{content:"—";color:rgba(255,255,255,0.25);} .against-col.us li:before{content:"→";color:var(--amber);font-weight:700;}
@@ -38,7 +38,7 @@
   .steps{display:flex;flex-direction:column;} .step{display:flex;gap:20px;padding:26px 0;border-top:1px solid rgba(255,255,255,0.08);} .step:last-child{border-bottom:1px solid rgba(255,255,255,0.08);}
   .step-num{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--amber);font-weight:600;width:36px;flex-shrink:0;padding-top:2px;}
   .step-body h3{font-family:'Space Grotesk',sans-serif;font-size:18px;margin-bottom:6px;} .step-body p{font-size:14.5px;color:var(--muted);max-width:480px;}
-  .price-card{background:var(--panel);border:1px solid rgba(245,166,35,0.35);border-radius:22px;padding:40px 34px;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,0.35);}
+  .price-card{background:var(--panel);border:1px solid rgba(203,89,3,0.35);border-radius:22px;padding:40px 34px;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,0.35);}
   .price-tag{display:flex;align-items:baseline;gap:8px;margin:18px 0 4px;} .price-num{font-family:'Space Grotesk',sans-serif;font-size:52px;font-weight:800;color:var(--amber);} .price-unit{color:var(--muted);font-size:15px;}
   .price-note{font-size:13.5px;color:var(--muted);margin-bottom:24px;} .price-list{list-style:none;margin-bottom:28px;} .price-list li{font-size:14.5px;padding:8px 0;display:flex;gap:10px;align-items:flex-start;} .check{color:var(--cyan);font-weight:800;flex-shrink:0;}
   .price-card .btn-primary{width:100%;text-align:center;}
@@ -94,8 +94,10 @@
       <div class="value-item"><strong>Real coding skill</strong><span>You write and explain every piece. The skill stays with you for the next tool and the one after that.</span></div>
       <div class="value-item"><strong>Full walkthrough</strong><span>Plain-language explanation of how your entire tool works so you can teach it to someone else.</span></div>
       <div class="value-item"><strong>Concept map of what you learned</strong><span>Every idea you practiced, tied back to where it lives in your finished tool.</span></div>
+      <div class="value-item"><strong>Free deploy guide</strong><span>Step-by-step instructions to put your tool live on the internet for free, no experience required.</span></div>
+      <div class="value-item"><strong>Resume &amp; interview pitch</strong><span>A ready-to-use paragraph for your resume, LinkedIn, or a job interview describing what you built.</span></div>
+      <div class="value-item"><strong>Completion certificate</strong><span>A downloadable, shareable certificate proving you built a real, working tool from scratch.</span></div>
       <div class="value-item"><strong>On-demand mentor</strong><span>Stuck on any step? Ask. It answers about your actual code, not generic tutorials.</span></div>
-      <div class="value-item"><strong>Shareable proof</strong><span>A clean “I built this” card you can post. Most people never go from zero to a working tool.</span></div>
     </div>
   </section>
 
@@ -110,7 +112,7 @@
   </section>
 
   <section id="price" class="wrap">
-    <div class="section-head"><div class="section-eyebrow">PRICING</div><h2>Start free. $4.99 to finish. Every time.</h2></div>
+    <div class="section-head"><div class="section-eyebrow">PRICING</div><h2>Start free. $4.99 for the whole bundle. Every time.</h2></div>
     <div class="price-card">
       <div style="font-size:13px;color:var(--muted);font-weight:700;letter-spacing:0.5px;">FIRST 2 STEPS — FREE</div>
       <div class="price-tag"><span class="price-num">$4.99</span><span class="price-unit">per build, one-time</span></div>
@@ -121,6 +123,9 @@
         <li><span class="check">✓</span> Mentor for every step</li>
         <li><span class="check">✓</span> Finished downloadable tool + run guide</li>
         <li><span class="check">✓</span> Full walkthrough + concept map of what you learned</li>
+        <li><span class="check">✓</span> README + free deploy guide to put it live online</li>
+        <li><span class="check">✓</span> Resume / LinkedIn / interview pitch, written for you</li>
+        <li><span class="check">✓</span> Downloadable completion certificate</li>
         <li><span class="check">✓</span> You own the code forever</li>
       </ul>
       <a href="app.html" class="btn-primary">Start free</a>
