@@ -7,15 +7,42 @@ const CYAN = "#5FE3C9";
 const TEXT = "#E9EEF7";
 const MUTED = "#8FA0BC";
 
+const SITE_URL = "https://forge-your-imagination.vercel.app";
+const FREE_LEVELS = 2;
+const BUILD_PRICE = "$4.99";
+const SAVE_KEY = "forge_progress_v1";
+const TOOLS_KEY = "forge_my_tools_v1";
+
+const EXAMPLE_TOOLS = [
+  {
+    title: "Scam & Priority Message Detector",
+    goal: "A tool that mass-reads all my unread texts and emails at once and sorts every message into genuinely important, safe to ignore, or dangerous scam/phishing",
+  },
+  {
+    title: "Household & General Diagnostic",
+    goal: "A general diagnostic tool where I describe symptoms of any household or car problem in plain language and it returns the most likely causes ranked by probability",
+  },
+  {
+    title: "Bill, Contract & Agreement Checker",
+    goal: "A tool that reads hospital bills, contracts, insurance policies, and terms of service and tells me in plain language what actually matters and what to watch out for",
+  },
+  {
+    title: "Coupon & Deal Finder",
+    goal: "A coupon and deal finder that takes any product or shopping list and finds working coupons, cash-back offers, and stackable discounts across major retailers",
+  },
+  {
+    title: "Job Autofill",
+    goal: "A job application tool that takes my existing resume, tailors it to each specific job listing, and then fills out the actual application form for me",
+  },
+];
+
 async function askClaude(prompt, system) {
   const res = await fetch("/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt, system }),
   });
-  if (!res.ok) {
-    throw new Error("Request failed");
-  }
+  if (!res.ok) throw new Error("Request failed");
   const data = await res.json();
   return data.text || "";
 }
@@ -90,9 +117,18 @@ function Btn({ onClick, children, disabled, variant = "primary" }) {
   );
 }
 
-const FREE_LEVELS = 2;
-const BUILD_PRICE = "$4.99";
-const SAVE_KEY = "forge_progress_v1";
+function saveFinishedTool(tool) {
+  try {
+    const raw = localStorage.getItem(TOOLS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    list.unshift({
+      name: tool.name,
+      description: tool.description,
+      date: new Date().toISOString().slice(0, 10),
+    });
+    localStorage.setItem(TOOLS_KEY, JSON.stringify(list.slice(0, 20)));
+  } catch (e) {}
+}
 
 export default function BuildWithCode() {
   const [phase, setPhase] = useState("onboarding");
@@ -117,9 +153,9 @@ export default function BuildWithCode() {
   const [unlocked, setUnlocked] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [shareText, setShareText] = useState("");
+  const [myTools, setMyTools] = useState([]);
   const consoleBuffer = useRef([]);
 
-  // On load: restore any saved progress, and verify payment via session_id if present
   useEffect(() => {
     try {
       const saved = localStorage.getItem(SAVE_KEY);
@@ -133,31 +169,32 @@ export default function BuildWithCode() {
         if (parsed.experience) setExperience(parsed.experience);
         if (parsed.roadmap) setPhase("roadmap");
       }
-    } catch (e) {
-      // ignore corrupted local storage
-    }
+      const toolsRaw = localStorage.getItem(TOOLS_KEY);
+      if (toolsRaw) setMyTools(JSON.parse(toolsRaw));
+    } catch (e) {}
 
     const params = new URLSearchParams(window.location.search);
+    const goalParam = params.get("goal");
+    if (goalParam && !localStorage.getItem(SAVE_KEY)) {
+      setGoal(goalParam);
+    }
+
     const sessionId = params.get("session_id");
     if (sessionId) {
       setVerifyingPayment(true);
       fetch(`/api/verify-payment?session_id=${encodeURIComponent(sessionId)}`)
         .then((r) => r.json())
         .then((data) => {
-          if (data.paid) {
-            setUnlocked(true);
-          }
+          if (data.paid) setUnlocked(true);
         })
         .catch(() => {})
         .finally(() => {
           setVerifyingPayment(false);
-          // clean the session_id off the URL so refreshes don't re-verify
           window.history.replaceState({}, "", window.location.pathname);
         });
     }
   }, []);
 
-  // Persist progress any time the important bits change
   useEffect(() => {
     if (!roadmap) return;
     try {
@@ -165,9 +202,7 @@ export default function BuildWithCode() {
         SAVE_KEY,
         JSON.stringify({ roadmap, completed, levelCode, unlocked, goal, experience })
       );
-    } catch (e) {
-      // ignore storage errors (e.g. private browsing)
-    }
+    } catch (e) {}
   }, [roadmap, completed, levelCode, unlocked, goal, experience]);
 
   async function generateRoadmap() {
@@ -227,7 +262,7 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
     try {
       const fn = new Function("console", code);
       fn(fakeConsole);
-      setOutput(consoleBuffer.current.join("\n") || "(no output — try using console.log to see results)");
+      setOutput(consoleBuffer.current.join("\\n") || "(no output — try using console.log to see results)");
     } catch (e) {
       setOutput("Error: " + e.message);
     }
@@ -239,7 +274,7 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
     try {
       const level = roadmap.levels[levelIndex];
       const system = `You are a thorough, no-shortcuts coding mentor reviewing a beginner's work for one lesson. You check TWO things: (1) does the code reasonably attempt and accomplish the task, and (2) does their written explanation show they actually understand what the code does and why, not just that it runs. Respond with ONLY raw JSON: {"passed": true|false, "feedback": "3-5 sentences, warm but honest and specific, in plain language. If the explanation is vague or just restates the code without showing understanding, say so and ask them to explain the 'why', not just the 'what'."}. Only pass if BOTH the code reasonably works AND the explanation shows genuine understanding. Do not let a correct-looking code pass with a hollow explanation.`;
-      const prompt = `Task: ${level.task}\nConcept being taught: ${level.concept}\nWhy it matters: ${level.whyItMatters}\nStudent's code:\n${code}\n\nQuestion asked: ${level.explainPrompt}\nStudent's explanation in their own words:\n${explanation || "(nothing written)"}`;
+      const prompt = `Task: ${level.task}\\nConcept being taught: ${level.concept}\\nWhy it matters: ${level.whyItMatters}\\nStudent's code:\\n${code}\\n\\nQuestion asked: ${level.explainPrompt}\\nStudent's explanation in their own words:\\n${explanation || "(nothing written)"}`;
       const text = await askClaude(prompt, system);
       const parsed = parseJSON(text);
       setFeedback(parsed);
@@ -260,7 +295,7 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
     try {
       const level = roadmap.levels[levelIndex];
       const system = `You are a patient, precise coding mentor. The student is stuck on a specific lesson and asked a direct question. Answer their exact question clearly and concretely — reference their actual code where relevant. Keep it to 3-6 sentences. Never just hand them the finished solution outright; guide them to understand it, unless they explicitly ask for the answer, in which case give it plainly. Plain text only, no JSON.`;
-      const prompt = `Lesson concept: ${level.concept}\nTask: ${level.task}\nStudent's current code:\n${code}\n\nStudent's question: ${askText}`;
+      const prompt = `Lesson concept: ${level.concept}\\nTask: ${level.task}\\nStudent's current code:\\n${code}\\n\\nStudent's question: ${askText}`;
       const text = await askClaude(prompt, system);
       setAskAnswer(text.trim());
     } catch (e) {
@@ -274,14 +309,27 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
     setPhase("capstone");
     try {
       const solutionsList = roadmap.levels
-        .map((lvl, i) => `Step ${i + 1} (${lvl.title}):\n${levelCode[i] || ""}`)
-        .join("\n\n");
-      const system = `You are assembling a beginner's finished project from the individual code pieces they wrote across a course. Respond with ONLY raw JSON, no markdown fences: {"finalCode": "one complete, clean, working JavaScript file combining all their pieces into the final tool, with clear comments", "walkthrough": "a thorough section-by-section explanation (6-10 short paragraphs) of exactly how the finished tool works end to end, written so the student can explain it to someone else with full confidence — no hand-waving, no skipped steps"}`;
-      const prompt = `Final tool: ${roadmap.toolName} — ${roadmap.toolDescription}\n\nHere are the pieces the student wrote across each step:\n${solutionsList}\n\nAssemble these into one clean final tool and write the full walkthrough.`;
+        .map((lvl, i) => `Step ${i + 1} (${lvl.title}):\\n${levelCode[i] || ""}`)
+        .join("\\n\\n");
+      const system = `You are assembling a beginner's finished project from the individual code pieces they wrote across a course. Respond with ONLY raw JSON, no markdown fences: {"finalCode": "one complete, clean, working JavaScript file combining all their pieces into the final tool, with clear comments", "walkthrough": "a thorough section-by-section explanation (6-10 short paragraphs) of exactly how the finished tool works end to end, written so the student can explain it to someone else with full confidence — no hand-waving, no skipped steps", "conceptMap": "a bullet-style plain text list of every major coding concept they practiced, each followed by one sentence on where it appears in the finished tool"}`;
+      const prompt = `Final tool: ${roadmap.toolName} — ${roadmap.toolDescription}\\n\\nHere are the pieces the student wrote across each step:\\n${solutionsList}\\n\\nAssemble these into one clean final tool, write the full walkthrough, and the concept map.`;
       const text = await askClaude(prompt, system);
       const parsed = parseJSON(text);
-      setCapstoneCode(parsed.finalCode);
-      setCapstoneWalkthrough(parsed.walkthrough);
+      setCapstoneCode(parsed.finalCode || "");
+      setCapstoneWalkthrough(
+        (parsed.walkthrough || "") +
+          (parsed.conceptMap
+            ? "\\n\\n---\\nWHAT YOU LEARNED (CONCEPT MAP)\\n" + parsed.conceptMap
+            : "")
+      );
+      saveFinishedTool({
+        name: roadmap.toolName,
+        description: roadmap.toolDescription,
+      });
+      try {
+        const toolsRaw = localStorage.getItem(TOOLS_KEY);
+        if (toolsRaw) setMyTools(JSON.parse(toolsRaw));
+      } catch (e) {}
     } catch (e) {
       setCapstoneCode("// Couldn't assemble automatically — your step-by-step code above is still yours to keep.");
       setCapstoneWalkthrough("");
@@ -290,28 +338,68 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
   }
 
   function downloadCapstone() {
+    const name = (roadmap.toolName || "my-tool").replace(/\\s+/g, "-").toLowerCase();
     const blob = new Blob([capstoneCode], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = (roadmap.toolName || "my-tool").replace(/\s+/g, "-").toLowerCase() + ".js";
+    a.download = name + ".js";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadHtmlRunner() {
+    const name = (roadmap.toolName || "my-tool").replace(/\\s+/g, "-").toLowerCase();
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${roadmap.toolName || "My Tool"}</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; line-height: 1.5; }
+  h1 { font-size: 1.4rem; }
+  pre { background: #0B1220; color: #5FE3C9; padding: 16px; border-radius: 12px; overflow: auto; font-size: 13px; }
+  .note { color: #666; font-size: 14px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+  <h1>${roadmap.toolName || "My Tool"}</h1>
+  <p class="note">You built this with Forge. The code below is yours forever. Open the browser console (F12) to see output if the tool uses console.log.</p>
+  <pre id="code"></pre>
+  <script>
+    const code = ${JSON.stringify(capstoneCode)};
+    document.getElementById("code").textContent = code;
+    try {
+      // eslint-disable-next-line no-new-func
+      new Function(code)();
+    } catch (e) {
+      console.error(e);
+    }
+  </script>
+</body>
+</html>`;
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name + ".html";
     a.click();
     URL.revokeObjectURL(url);
   }
 
   function shareTool() {
-    const text = `I just built "${roadmap.toolName}" — an AI-powered tool I wrote myself, no coding experience going in. Forge built the exact path to teach me what I needed. Try it: `;
+    const text = `I just built "${roadmap.toolName}" — an AI-powered tool I wrote myself from scratch. Forge taught me the exact path. First 2 steps free → ${SITE_URL}`;
     setShareText(text);
     if (navigator.share) {
-      navigator.share({ text, title: "I built " + roadmap.toolName }).catch(() => {});
+      navigator.share({ text, title: "I built " + roadmap.toolName, url: SITE_URL }).catch(() => {});
     } else {
       navigator.clipboard.writeText(text).then(() => {
-        setShareText(text + " (copied to clipboard!)");
+        setShareText(text + "  (copied!)");
       });
     }
   }
 
-  // Save progress right before leaving for Stripe, so the redirect back can restore it
   function goToCheckout() {
     try {
       localStorage.setItem(
@@ -319,6 +407,24 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
         JSON.stringify({ roadmap, completed, levelCode, unlocked, goal, experience })
       );
     } catch (e) {}
+  }
+
+  function pickExample(exampleGoal) {
+    setGoal(exampleGoal);
+  }
+
+  function resetToOnboarding() {
+    localStorage.removeItem(SAVE_KEY);
+    setPhase("onboarding");
+    setGoal("");
+    setExperience(null);
+    setRoadmap(null);
+    setCompleted({});
+    setLevelCode({});
+    setUnlocked(false);
+    setCapstoneCode("");
+    setCapstoneWalkthrough("");
+    setShareText("");
   }
 
   // ---- ONBOARDING ----
@@ -331,8 +437,35 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
           </div>
           <div style={{ color: MUTED, marginBottom: 22, fontSize: 15, lineHeight: 1.5 }}>
             Not another tutorial. Tell us the real thing you want to build, and we'll teach you exactly
-            the code you need — nothing else — until you've actually built it.
+            the code you need — nothing else — until you've actually built it. You walk away with the
+            tool and the skill.
           </div>
+
+          <div style={{ fontSize: 13, fontWeight: 700, color: CYAN, letterSpacing: 0.5, marginBottom: 10 }}>
+            OR PICK AN EXAMPLE
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+            {EXAMPLE_TOOLS.map((ex) => (
+              <button
+                key={ex.title}
+                onClick={() => pickExample(ex.goal)}
+                style={{
+                  textAlign: "left",
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  border: goal === ex.goal ? `1px solid ${AMBER}` : "1px solid rgba(255,255,255,0.1)",
+                  background: goal === ex.goal ? "rgba(245,166,35,0.1)" : "rgba(255,255,255,0.03)",
+                  color: goal === ex.goal ? AMBER : TEXT,
+                  fontSize: 13.5,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {ex.title}
+              </button>
+            ))}
+          </div>
+
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
             What do you want your AI-powered tool to do?
           </div>
@@ -378,11 +511,23 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
             Build my path →
           </Btn>
         </Panel>
+        {myTools.length > 0 && (
+          <Panel>
+            <div style={{ fontSize: 13, fontWeight: 700, color: CYAN, marginBottom: 10, letterSpacing: 0.5 }}>
+              YOUR FINISHED TOOLS
+            </div>
+            {myTools.slice(0, 5).map((t, i) => (
+              <div key={i} style={{ fontSize: 13.5, marginBottom: 8, color: TEXT }}>
+                <strong>{t.name}</strong>
+                <span style={{ color: MUTED }}> — {t.date}</span>
+              </div>
+            ))}
+          </Panel>
+        )}
       </Shell>
     );
   }
 
-  // ---- GENERATING ----
   if (phase === "generating") {
     return (
       <Shell>
@@ -401,7 +546,6 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
     );
   }
 
-  // ---- ROADMAP OVERVIEW ----
   if (phase === "roadmap" && roadmap) {
     const doneCount = Object.keys(completed).length;
     return (
@@ -421,12 +565,11 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
           <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.5 }}>{roadmap.toolDescription}</div>
         </Panel>
         <div style={{ fontSize: 13, color: MUTED, marginBottom: 10 }}>
-          {doneCount} of {roadmap.levels.length} steps complete
+          {doneCount} of {roadmap.levels.length} steps complete · progress saved automatically
         </div>
         {roadmap.levels.map((lvl, i) => {
           const sequenceUnlocked = i === 0 || completed[i - 1];
           const paywalled = i >= FREE_LEVELS && !unlocked;
-          const canStart = sequenceUnlocked && !paywalled;
           return (
             <div key={i} style={{ display: "flex", gap: 14 }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 28 }}>
@@ -484,7 +627,6 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
     );
   }
 
-  // ---- PAYWALL ----
   if (phase === "paywall" && roadmap) {
     return (
       <Shell>
@@ -493,9 +635,8 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
           <div className="display" style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
             You've seen how it works
           </div>
-          <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
-            The first {FREE_LEVELS} steps are free for everyone, no strings attached. Unlocking the rest
-            finishes {roadmap.toolName} and gives you the real, working, downloadable tool at the end.
+          <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+            The first {FREE_LEVELS} steps are free. Unlocking finishes <strong style={{ color: TEXT }}>{roadmap.toolName}</strong> and gives you the working tool, run guide, full walkthrough, concept map, and ownership forever.
           </div>
           <div
             style={{
@@ -504,13 +645,16 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
               borderRadius: 16,
               padding: "20px",
               textAlign: "center",
-              marginBottom: 16,
+              marginBottom: 12,
             }}
           >
             <div className="display" style={{ fontSize: 34, fontWeight: 800, color: AMBER }}>{BUILD_PRICE}</div>
             <div style={{ fontSize: 13, color: MUTED }}>
-              one time, every build — keep the tool forever, no subscription
+              one time — keep the tool forever, no subscription
             </div>
+          </div>
+          <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16, textAlign: "center" }}>
+            Typical AI cost to complete a full build is roughly $0.15–0.40. You pay once and own it.
           </div>
           <a
             href="https://buy.stripe.com/4gMbJ3e8845LdgO190bsc00"
@@ -541,7 +685,6 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
     );
   }
 
-  // ---- LESSON ----
   if (phase === "lesson" && roadmap) {
     const level = roadmap.levels[levelIndex];
     return (
@@ -717,7 +860,7 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
           {feedback?.passed && (
             <Btn onClick={() => setPhase("roadmap")}>Nice — back to path</Btn>
           )}
-          {!feedback?.passed && (
+          {!feedback?.passed && level.hint && (
             <div style={{ fontSize: 12.5, color: MUTED, marginTop: 10 }}>Hint: {level.hint}</div>
           )}
         </Panel>
@@ -725,7 +868,6 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
     );
   }
 
-  // ---- CAPSTONE ----
   if (phase === "capstone" && roadmap) {
     if (buildingCapstone) {
       return (
@@ -752,14 +894,15 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
             You built {roadmap.toolName}
           </div>
           <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.6 }}>
-            Every piece below is code you personally wrote and explained, step by step — not
-            copy-paste. This app taught you the same way it's built: real code, calling a real AI API.
+            Most people never go from zero to a working tool. You just did. Every piece below is code
+            you personally wrote and explained — not copy-paste. This is yours forever. No subscription.
+            No lock-in.
           </div>
         </Panel>
         {capstoneWalkthrough && (
           <Panel>
             <div style={{ fontSize: 13, fontWeight: 700, color: CYAN, marginBottom: 10, letterSpacing: 0.5 }}>
-              HOW IT WORKS, START TO FINISH
+              HOW IT WORKS + WHAT YOU LEARNED
             </div>
             <div style={{ fontSize: 13.5, lineHeight: 1.7, color: TEXT, whiteSpace: "pre-wrap" }}>
               {capstoneWalkthrough}
@@ -786,7 +929,15 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
             >
               {capstoneCode}
             </div>
-            <Btn onClick={downloadCapstone}>⬇ Download your tool</Btn>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+              <Btn onClick={downloadCapstone}>⬇ Download .js</Btn>
+              <Btn variant="secondary" onClick={downloadHtmlRunner}>⬇ Download HTML runner</Btn>
+            </div>
+            <div style={{ fontSize: 12.5, color: MUTED, marginTop: 12, lineHeight: 1.5 }}>
+              <strong style={{ color: TEXT }}>How to run later:</strong> Open the HTML file in any browser,
+              or run the .js file with Node. The code is yours — no account, no API key from us required
+              after this.
+            </div>
           </Panel>
         )}
         <Panel>
@@ -794,7 +945,7 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
             SHOW SOMEONE WHAT YOU JUST BUILT
           </div>
           <div style={{ fontSize: 13.5, color: MUTED, marginBottom: 14, lineHeight: 1.5 }}>
-            You went from zero to a real working tool. That's genuinely rare — share it.
+            You went from zero to a real working tool. Share it — and send people to the free first steps.
           </div>
           <Btn variant="secondary" onClick={shareTool}>Share what I built</Btn>
           {shareText && (
@@ -813,21 +964,10 @@ Generate 9-11 levels, ordered from easiest to hardest, each a real building bloc
             </div>
           )}
         </Panel>
-        <Btn
-          variant="ghost"
-          onClick={() => {
-            localStorage.removeItem(SAVE_KEY);
-            setPhase("onboarding");
-            setGoal("");
-            setExperience(null);
-            setRoadmap(null);
-            setCompleted({});
-            setLevelCode({});
-            setUnlocked(false);
-            setCapstoneCode("");
-            setCapstoneWalkthrough("");
-          }}
-        >
+        <div style={{ fontSize: 12.5, color: MUTED, textAlign: "center", marginBottom: 16 }}>
+          Typical AI cost for a full build: ~$0.15–0.40. You paid $4.99 once and own it forever.
+        </div>
+        <Btn variant="ghost" onClick={resetToOnboarding}>
           Build another tool
         </Btn>
       </Shell>
